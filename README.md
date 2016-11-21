@@ -2,7 +2,7 @@
 汤不热 python 多线程爬虫
 
 #### install
-> pip install requirements.txt
+> pip install -r requirements.txt
 
 
 #### run
