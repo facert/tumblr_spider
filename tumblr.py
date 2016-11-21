@@ -61,7 +61,8 @@ class Tumblr(threading.Thread):
 def main():
     NUM_WORKERS = 100
     queue = Queue.Queue()
-    queue.put('darevilhk')
+    # 修改这里的 username
+    queue.put('username')
 
     for i in range(NUM_WORKERS):
         tumblr = Tumblr(queue)
