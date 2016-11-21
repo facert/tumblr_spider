@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
-
+import signal
+import sys
 import requests
 import threading
 import Queue
@@ -7,6 +8,7 @@ import time
 from bs4 import BeautifulSoup
 
 mutex = threading.Lock()
+is_exit = False
 
 
 class Tumblr(threading.Thread):
@@ -15,7 +17,6 @@ class Tumblr(threading.Thread):
         self.user_queue = queue
         self.total_user = []
         self.total_url = []
-
         self.f_user = open('user.txt', 'a+')
         self.f_source = open('source.txt', 'a+')
 
@@ -46,29 +47,57 @@ class Tumblr(threading.Thread):
                 print u'新增用户:' + username
 
         mutex.acquire()
-        self.f_user.write('\n'.join(tmp_user)+'\n')
-        self.f_source.write('\n'.join(tmp_source)+'\n')
+        if tmp_user:
+            self.f_user.write('\n'.join(tmp_user)+'\n')
+        if tmp_source:
+            self.f_source.write('\n'.join(tmp_source)+'\n')
         mutex.release()
 
     def run(self):
-        while True:
+        global is_exit
+        while not is_exit:
             user = self.user_queue.get()
             url = 'http://%s.tumblr.com/' % user
             self.download(url)
             time.sleep(2)
+        self.f_user.close()
+        self.f_source.close()
+
+
+def handler(signum, frame):
+    global is_exit
+    is_exit = True
+    print "receive a signal %d, is_exit = %d" % (signum, is_exit)
+    sys.exit(0)
 
 
 def main():
-    NUM_WORKERS = 100
+
+    if len(sys.argv) < 2:
+        print 'usage: python tumblr.py username'
+        sys.exit()
+    username = sys.argv[1]
+
+    NUM_WORKERS = 10
     queue = Queue.Queue()
     # 修改这里的 username
-    queue.put('username')
+    queue.put(username)
 
+    signal.signal(signal.SIGINT, handler)
+    signal.signal(signal.SIGTERM, handler)
+
+    threads = []
     for i in range(NUM_WORKERS):
         tumblr = Tumblr(queue)
+        tumblr.setDaemon(True)
         tumblr.start()
-    for i in range(NUM_WORKERS):
-        tumblr.join()
+        threads.append(tumblr)
+
+    while True:
+        for i in threads:
+            if not i.isAlive():
+                break
+        time.sleep(1)
 
 
 if __name__ == '__main__':
