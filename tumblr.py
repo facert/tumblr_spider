@@ -3,7 +3,7 @@ import signal
 import sys
 import requests
 import threading
-import Queue
+import queue
 import time
 from bs4 import BeautifulSoup
 
@@ -34,7 +34,7 @@ class Tumblr(threading.Thread):
             if source and source.find('https://www.tumblr.com/video') != -1 and source not in self.total_url:
                 source_list.append(source)
                 tmp_source.append(source)
-                print u'新增链接:' + source
+                print (u'新增链接:' + source)
 
         tmp_user = []
         new_users = soup.find_all(class_='reblog-link')
@@ -44,7 +44,7 @@ class Tumblr(threading.Thread):
                 self.user_queue.put(username)
                 self.total_user.append(username)
                 tmp_user.append(username)
-                print u'新增用户:' + username
+                print (u'新增用户:' + username)
 
         mutex.acquire()
         if tmp_user:
@@ -67,28 +67,28 @@ class Tumblr(threading.Thread):
 def handler(signum, frame):
     global is_exit
     is_exit = True
-    print "receive a signal %d, is_exit = %d" % (signum, is_exit)
+    print ("receive a signal %d, is_exit = %d" % (signum, is_exit))
     sys.exit(0)
 
 
 def main():
 
     if len(sys.argv) < 2:
-        print 'usage: python tumblr.py username'
+        print ('usage: python tumblr.py username')
         sys.exit()
     username = sys.argv[1]
 
     NUM_WORKERS = 10
-    queue = Queue.Queue()
+    q = queue.Queue()
     # 修改这里的 username
-    queue.put(username)
+    q.put(username)
 
     signal.signal(signal.SIGINT, handler)
     signal.signal(signal.SIGTERM, handler)
 
     threads = []
     for i in range(NUM_WORKERS):
-        tumblr = Tumblr(queue)
+        tumblr = Tumblr(q)
         tumblr.setDaemon(True)
         tumblr.start()
         threads.append(tumblr)
